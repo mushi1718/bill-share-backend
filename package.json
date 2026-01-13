@@ -1,0 +1,48 @@
+{
+  "name": "turtlehub-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node dist/src/server.js",
+    "dev": "npm run dev:local",
+    "dev:local": "APP_ENV=local nodemon --exec ts-node src/server.ts",
+    "dev:dev": "APP_ENV=development nodemon --exec ts-node src/server.ts",
+    "dev:prod": "APP_ENV=production nodemon --exec ts-node src/server.ts",
+    "test": "jest",
+    "build": "tsc",
+    "typeorm": "ts-node ./node_modules/typeorm/cli",
+    "migration:generate": "npm run typeorm -- migration:generate -d src/infrastructure/config/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run -d src/infrastructure/config/data-source.ts",
+    "migration:run:prod": "npm run typeorm -- migration:run -d dist/src/infrastructure/config/data-source.js",
+    "migration:revert": "npm run typeorm -- migration:revert -d src/infrastructure/config/data-source.ts",
+    "seed": "ts-node scripts/seed.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "firebase-admin": "^13.6.0",
+    "mysql2": "^3.16.0",
+    "nodemon": "^3.1.11",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.28",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.3",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  }
+}

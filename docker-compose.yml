@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  turtlehub-backend:
+    build: .
+    image: turtlehub-backend
+    container_name: turtlehub-backend
+    environment:
+      - DB_HOST=mysql        # 注意：這裡直接填寫 mysql 容器名稱
+      - DB_PORT=3306         # 容器內部連線用 3306
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    networks:
+      - my-bridge-network    # 指定加入這個網路
+    env_file:
+      - .env
+
+networks:
+  my-bridge-network:
+    external: true           # 告訴 Docker 這個網路已經存在，不用幫我新建
