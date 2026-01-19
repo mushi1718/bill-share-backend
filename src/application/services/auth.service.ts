@@ -1,6 +1,6 @@
 import { AuthResponse } from '../../domain/entities/user';
 import { dbUserRepository } from '../../infrastructure/repositories/db-user.repository';
-import { dbWorkspaceRepository } from '../../infrastructure/repositories/db-workspace.repository';
+
 import { firebaseAdmin } from '../../infrastructure/config/firebase.config';
 
 export class AuthService {
@@ -25,22 +25,8 @@ export class AuthService {
           isActive: true
         });
       } else if (!user.firebaseUid) {
-        // Link existing user to firebase uid if needed
-         // Note: In a real app you might want to be careful about linking strategies
         user.firebaseUid = uid;
-        // We'd need a method to update the user, assuming save or update exists on repo
-        // For now, we assume the repo handles this or we ignore it until explicit update request
-        // But since we returned `user` entity, we can theoretically save it back if typeorm entity
-        // However, dbUserRepository.create usually saves.
-        // Let's assume for this MVP we just return the found user.
-        // ideally: await dbUserRepository.update(user.id, { firebaseUid: uid });
-      }
-
-      // Ensure default workspaces exist for this user
-      try {
-        await dbWorkspaceRepository.findByUserId(user.id);
-      } catch (err) {
-        console.warn('Failed to initialize workspaces on login', err);
+        // In a real app we should update the user here
       }
 
       return {
@@ -50,11 +36,11 @@ export class AuthService {
           name: user.name,
           avatarUrl: user.avatarUrl
         },
-        token: 'firebase_session_' + uid // In a real app, you might mint a custom JWT or just use the ID token on client
+        token: 'firebase_session_' + uid
       };
     } catch (error) {
-       console.error('Firebase Auth Error:', error);
-       throw new Error('auth/invalid-token');
+      console.error('Firebase Auth Error:', error);
+      throw new Error('auth/invalid-token');
     }
   }
 

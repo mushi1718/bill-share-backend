@@ -1,7 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { Workspace } from './workspace.entity';
-
-
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -9,7 +6,6 @@ export class User {
 
   @Column({ unique: true })
   email!: string;
-
 
   @Column({ unique: true, nullable: true })
   firebaseUid!: string;
@@ -33,9 +29,4 @@ export class User {
 
   @Column({ default: false })
   isPro!: boolean;
-
-  @OneToMany(() => Workspace, (workspace) => workspace.user)
-  workspaces!: Workspace[];
-
-
 }

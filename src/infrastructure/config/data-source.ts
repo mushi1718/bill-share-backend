@@ -1,12 +1,10 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
-import { App } from "../database/entities/app.entity";
-import { AppTranslation } from "../database/entities/app-translation.entity";
 import { User } from "../database/entities/user.entity";
-import { Workspace } from "../database/entities/workspace.entity";
-import { WorkspaceApp } from "../database/entities/workspace-app.entity";
-import { Template } from "../database/entities/workspace-template.entity";
-import { TemplateTrans } from "../database/entities/workspace-template-translation.entity";
+import { ExpenseGroup } from "../database/entities/expense-group.entity";
+import { Expense } from "../database/entities/expense.entity";
+import { GroupMember } from "../database/entities/group-member.entity";
+import { ExpenseSplit } from "../database/entities/expense-split.entity";
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -23,7 +21,7 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_NAME || "app_center",
     synchronize: false,
     logging: false,
-    entities: [App, AppTranslation, User, Workspace, WorkspaceApp, Template, TemplateTrans],
+    entities: [User, ExpenseGroup, Expense, GroupMember, ExpenseSplit],
     migrations: [path.join(__dirname, '../database/migrations/**/*.{ts,js}')],
     subscribers: [],
 });

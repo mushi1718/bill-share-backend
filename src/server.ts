@@ -9,9 +9,9 @@ import { loggerMiddleware } from './presentation/middlewares/logger.middleware';
 const env = process.env.APP_ENV || 'local';
 dotenv.config({ path: path.resolve(process.cwd(), `.env.${env}`) });
 
-import appRoutes from './presentation/routes/app.routes';
 import authRoutes from './presentation/routes/auth.routes';
 import userRoutes from './presentation/routes/user.routes';
+import expenseGroupRoutes from './presentation/routes/expense-group.routes';
 import { AppDataSource } from './infrastructure/config/data-source';
 
 const app = express();
@@ -22,7 +22,7 @@ app.use(express.json());
 app.use(loggerMiddleware);
 
 // Routes
-app.use('/api/apps', appRoutes);
+app.use('/api/expense-groups', expenseGroupRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 

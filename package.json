@@ -14,8 +14,7 @@
     "migration:generate": "npm run typeorm -- migration:generate -d src/infrastructure/config/data-source.ts",
     "migration:run": "npm run typeorm -- migration:run -d src/infrastructure/config/data-source.ts",
     "migration:run:prod": "npm run typeorm -- migration:run -d dist/src/infrastructure/config/data-source.js",
-    "migration:revert": "npm run typeorm -- migration:revert -d src/infrastructure/config/data-source.ts",
-    "seed": "ts-node scripts/seed.ts"
+    "migration:revert": "npm run typeorm -- migration:revert -d src/infrastructure/config/data-source.ts"
   },
   "keywords": [],
   "author": "",
