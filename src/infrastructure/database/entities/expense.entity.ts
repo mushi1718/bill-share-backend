@@ -25,6 +25,9 @@ export class Expense {
     @Column('decimal', { precision: 10, scale: 2 })
     amount!: number;
 
+    @Column({ type: 'varchar', length: 20, default: 'GENERAL' })
+    category!: string; // 'GENERAL' | 'SETTLEMENT'
+
     @Column()
     description!: string;
 

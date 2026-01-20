@@ -37,7 +37,7 @@ export class ExpenseGroupService {
     }
 
     // 新增一筆帳務紀錄 (包含總金額、付款人、以及分帳細節)
-    async addExpense(groupId: string, payerMemberId: string, amount: number, description: string, splits: { memberId: string, amount: number }[]): Promise<Expense> {
+    async addExpense(groupId: string, payerMemberId: string, amount: number, description: string, splits: { memberId: string, amount: number }[], category: string = 'GENERAL'): Promise<Expense> {
         // 1. 驗證群組是否存在
         const group = await this.groupRepo.findOneBy({ id: groupId });
         if (!group) throw new Error("Group not found");
@@ -53,6 +53,7 @@ export class ExpenseGroupService {
             payer_member_id: payerMemberId,
             amount,
             description,
+            category,
             // 4. 處理分帳明細 (Splits)
             splits: splits.map(s => {
                 const split = new ExpenseSplit();

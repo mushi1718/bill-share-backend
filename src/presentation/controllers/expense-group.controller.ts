@@ -35,8 +35,8 @@ export class ExpenseGroupController {
     addExpense = async (req: Request, res: Response) => {
         try {
             const { id } = req.params;
-            const { payerMemberId, amount, description, splits } = req.body;
-            const expense = await this.service.addExpense(id, payerMemberId, amount, description, splits);
+            const { payerMemberId, amount, description, splits, category } = req.body;
+            const expense = await this.service.addExpense(id, payerMemberId, amount, description, splits, category);
             res.status(201).json(expense);
         } catch (error: any) {
             res.status(500).json({ error: error.message });
