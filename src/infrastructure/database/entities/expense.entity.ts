@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, OneToMany, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn } from "typeorm";
 import { ExpenseGroup } from "./expense-group.entity";
 import { GroupMember } from "./group-member.entity";
 import { ExpenseSplit } from "./expense-split.entity";
@@ -33,6 +33,17 @@ export class Expense {
 
     @CreateDateColumn()
     date!: Date;
+
+    @UpdateDateColumn()
+    updated_at!: Date;
+
+    // 軟刪除標記
+    @Column({ default: false })
+    is_deleted!: boolean;
+
+    // 樂觀鎖版本號
+    @Column({ default: 1 })
+    version!: number;
 
     @OneToMany(() => ExpenseSplit, (split: ExpenseSplit) => split.expense, { cascade: true })
     splits!: ExpenseSplit[];

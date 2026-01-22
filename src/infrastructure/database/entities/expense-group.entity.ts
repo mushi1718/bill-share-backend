@@ -10,6 +10,9 @@ export class ExpenseGroup {
     @Column()
     name!: string;
 
+    @Column({ default: '💰' })
+    icon!: string;
+
     @Column({ default: 'TWD' })
     currency!: string;
 

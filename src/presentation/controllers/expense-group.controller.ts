@@ -56,4 +56,85 @@ export class ExpenseGroupController {
             res.status(500).json({ error: error.message });
         }
     }
+
+    // ===== CRUD: 更新帳務 =====
+    // PUT /api/expense-groups/:id/expenses/:expenseId
+    updateExpense = async (req: Request, res: Response) => {
+        try {
+            const { expenseId } = req.params;
+            const { amount, description, payerMemberId, splits, expectedVersion } = req.body;
+            const changedBy = (req as any).user?.uid || 'anonymous';
+
+            const expense = await this.service.updateExpense(
+                expenseId,
+                { amount, description, payerMemberId, splits },
+                changedBy,
+                expectedVersion
+            );
+            res.json({ success: true, data: expense });
+        } catch (error: any) {
+            if (error.message.includes('Version conflict')) {
+                return res.status(409).json({ success: false, error: error.message });
+            }
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+
+    // ===== CRUD: 刪除帳務 (邏輯刪除) =====
+    // DELETE /api/expense-groups/:id/expenses/:expenseId
+    deleteExpense = async (req: Request, res: Response) => {
+        try {
+            const { expenseId } = req.params;
+            const { reason } = req.body;
+            const changedBy = (req as any).user?.uid || 'anonymous';
+
+            await this.service.deleteExpense(expenseId, changedBy, reason);
+            res.json({ success: true, message: 'Expense deleted successfully' });
+        } catch (error: any) {
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+
+    // ===== CRUD: 取得帳務修改歷史 =====
+    // GET /api/expense-groups/:id/expenses/:expenseId/history
+    getExpenseHistory = async (req: Request, res: Response) => {
+        try {
+            const { expenseId } = req.params;
+            const history = await this.service.getExpenseHistory(expenseId);
+            res.json({ success: true, data: history });
+        } catch (error: any) {
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+
+    // ===== Identity Linking: 取得成員摘要 =====
+    // GET /api/expense-groups/:id/members/:memberId/summary
+    getMemberSummary = async (req: Request, res: Response) => {
+        try {
+            const { memberId } = req.params;
+            const summary = await this.service.getMemberSummary(memberId);
+            res.json({ success: true, data: summary });
+        } catch (error: any) {
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
+
+    // ===== Identity Linking: 連結訪客到會員帳號 =====
+    // POST /api/expense-groups/:id/members/:memberId/link
+    linkMember = async (req: Request, res: Response) => {
+        try {
+            const { memberId } = req.params;
+            const { userId } = req.body;
+            const linkedBy = (req as any).user?.uid || 'anonymous';
+
+            if (!userId) {
+                return res.status(400).json({ success: false, error: 'userId is required' });
+            }
+
+            const member = await this.service.linkMemberToUser(memberId, userId, linkedBy);
+            res.json({ success: true, data: member });
+        } catch (error: any) {
+            res.status(500).json({ success: false, error: error.message });
+        }
+    }
 }

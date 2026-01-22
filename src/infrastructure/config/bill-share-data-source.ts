@@ -3,6 +3,7 @@ import { ExpenseGroup } from "../database/entities/expense-group.entity";
 import { GroupMember } from "../database/entities/group-member.entity";
 import { Expense } from "../database/entities/expense.entity";
 import { ExpenseSplit } from "../database/entities/expense-split.entity";
+import { ExpenseLog } from "../database/entities/expense-log.entity";
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -16,7 +17,7 @@ export const BillShareDataSource = new DataSource({
     database: process.env.BILL_SHARE_DB_NAME || "bill_share_db",
     synchronize: false,
     logging: true,
-    entities: [ExpenseGroup, GroupMember, Expense, ExpenseSplit],
+    entities: [ExpenseGroup, GroupMember, Expense, ExpenseSplit, ExpenseLog],
     subscribers: [],
     migrations: [],
 });
