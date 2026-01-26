@@ -36,6 +36,32 @@ export class ExpenseGroupController {
         }
     }
 
+    // 更新群組 API (PUT /api/expense-groups/:id)
+    updateGroup = async (req: Request, res: Response) => {
+        try {
+            const { id } = req.params;
+            const { name, icon } = req.body;
+            const group = await this.service.updateGroup(id, name, icon);
+            res.json(group);
+        } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // 刪除群組 API (DELETE /api/expense-groups/:id)
+    deleteGroup = async (req: Request, res: Response) => {
+        try {
+            const { id } = req.params;
+            await this.service.deleteGroup(id);
+            res.json({ success: true, message: "Group deleted successfully" });
+        } catch (error: any) {
+            if (error.message.includes('outstanding balances')) {
+                return res.status(409).json({ error: error.message });
+            }
+            res.status(500).json({ error: error.message });
+        }
+    }
+
     // 加入成員 API (POST /api/expense-groups/:id/members)
     addMember = async (req: Request, res: Response) => {
         try {
@@ -44,6 +70,20 @@ export class ExpenseGroupController {
             const member = await this.service.addMember(id, name, userId, avatarUrl);
             res.status(201).json(member);
         } catch (error: any) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+
+    // 移除成員 API (DELETE /api/expense-groups/:id/members/:memberId)
+    removeMember = async (req: Request, res: Response) => {
+        try {
+            const { id, memberId } = req.params;
+            await this.service.removeMember(id, memberId);
+            res.json({ success: true, message: "Member removed successfully" });
+        } catch (error: any) {
+            if (error.message.includes('non-zero balance') || error.message.includes('existing expenses')) {
+                return res.status(409).json({ error: error.message });
+            }
             res.status(500).json({ error: error.message });
         }
     }

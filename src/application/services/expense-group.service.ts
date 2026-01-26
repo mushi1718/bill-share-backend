@@ -6,6 +6,7 @@ import { ExpenseSplit } from "../../infrastructure/database/entities/expense-spl
 import { ExpenseLog } from "../../infrastructure/database/entities/expense-log.entity";
 import { v4 as uuidv4 } from 'uuid';
 import { BalanceService } from "./balance.service";
+import { In } from "typeorm";
 
 export class ExpenseGroupService {
     private groupRepo = BillShareDataSource.getRepository(ExpenseGroup);
@@ -33,11 +34,80 @@ export class ExpenseGroupService {
         return savedGroup;
     }
 
+    // 更新群組資訊
+    async updateGroup(id: string, name: string, icon: string): Promise<ExpenseGroup> {
+        const group = await this.groupRepo.findOneBy({ id });
+        if (!group) throw new Error("Group not found");
+
+        group.name = name;
+        if (icon) group.icon = icon;
+        return await this.groupRepo.save(group);
+    }
+
+    // 刪除群組 (僅限已結清)
+    async deleteGroup(id: string): Promise<void> {
+        const group = await this.groupRepo.findOneBy({ id });
+        if (!group) throw new Error("Group not found");
+
+        // 1. 檢查餘額 - 必須全部結清才能刪除
+        const balances = await this.balanceService.getGroupBalances(id);
+        const hasDebt = balances.some(b => Math.abs(b.balance) > 0.1);
+
+        // 為了安全，如果有未結清的帳務，禁止刪除
+        // 除非只有 0 餘額成員
+        // Note: An empty group (no expenses) has 0 balance, safe to delete.
+        if (hasDebt) {
+            throw new Error("Cannot delete group with outstanding balances. Please settle all debts first.");
+        }
+
+        // 2. 手動 Cascade Delete 以避免 FK 問題
+        // 刪除順序: Splits -> Expenses -> Members -> Group
+
+        // Find expenses
+        const expenses = await this.expenseRepo.findBy({ group: { id } });
+        const expenseIds = expenses.map(e => e.id);
+
+        if (expenseIds.length > 0) {
+            // Delete splits
+            await this.splitRepo.delete({ expense_id: In(expenseIds) });
+            // Delete logs (if any linked to expenses, strictly speaking logs might be linked via entity, logic check needed)
+            // expense-log usually links to expense. Let's assume we need to delete them too if they exist.
+            // But let's check ExpenseLog entity?
+            // Assuming ExpenseLog links to expense_group_id directly or expense_id.
+            // Let's safe guard:
+            await this.expenseRepo.delete({ id: In(expenseIds) });
+        }
+
+        // Delete members
+        await this.memberRepo.delete({ group_id: id });
+
+        // Finally delete group
+        await this.groupRepo.delete({ id });
+    }
+
     // 新增群組成員 (可以是已註冊的使用者，也可以是單純的訪客名稱)
     async addMember(groupId: string, name: string, userId?: string, avatarUrl?: string): Promise<GroupMember> {
-        const group = await this.groupRepo.findOneBy({ id: groupId });
+        const group = await this.groupRepo.findOne({
+            where: { id: groupId },
+            relations: ["members"]
+        });
         if (!group) {
             throw new Error("Group not found");
+        }
+
+        // Check for duplicates
+        if (userId) {
+            const existingUser = group.members?.find(m => m.user_id === userId);
+            if (existingUser) {
+                throw new Error("User is already a member of this group");
+            }
+        }
+
+        // Also check name for guests or potential naming conflicts
+        // Strict name check: don't allow duplicate names to avoid confusion
+        const existingName = group.members?.find(m => m.guest_name === name);
+        if (existingName) {
+            throw new Error(`Member with name "${name}" already exists in this group`);
         }
 
         const member = this.memberRepo.create({
@@ -48,6 +118,35 @@ export class ExpenseGroupService {
         });
 
         return await this.memberRepo.save(member);
+    }
+
+    // 移除群組成員
+    async removeMember(groupId: string, memberId: string): Promise<void> {
+        // 1. 檢查成員是否屬於該群組
+        const member = await this.memberRepo.findOneBy({ id: memberId, group_id: groupId });
+        if (!member) {
+            throw new Error("Member not found in this group");
+        }
+
+        // 2. 檢查餘額狀態
+        const balances = await this.balanceService.getGroupBalances(groupId);
+        const memberBalance = balances.find(b => b.memberId === memberId);
+
+        if (memberBalance && Math.abs(memberBalance.balance) > 0.01) { // 允許極小誤差
+            throw new Error("Cannot remove member with non-zero balance. Please settle debts first.");
+        }
+
+        // 3. 嘗試刪除 (若有 FK 關聯會失敗，由 Controller 捕捉或這裡處理)
+        try {
+            await this.memberRepo.delete({ id: memberId });
+        } catch (error: any) {
+            // 捕捉 Foreign Key Constraint 錯誤 (通常是 SQL State 23503)
+            // 這裡簡化判斷，若刪除失敗通常是因為有相關帳務
+            if (error.code === '23503' || error.message.includes('constraint')) {
+                throw new Error("Cannot remove member who is part of existing expenses or history.");
+            }
+            throw error;
+        }
     }
 
     // 新增一筆帳務紀錄 (包含總金額、付款人、以及分帳細節)

@@ -10,11 +10,20 @@ const balanceController = new BalanceController();
 // POST /api/expense-groups (Protected)
 router.post('/', firebaseAuthMiddleware, controller.createGroup);
 
-// GET /api/expense-groups/:id (Public or Protected? Let's make it protected for now or optional)
+// GET /api/expense-groups/:id (Protected)
 router.get('/:id', firebaseAuthMiddleware, controller.getGroupDetails);
+
+// PUT /api/expense-groups/:id - Update Group
+router.put('/:id', firebaseAuthMiddleware, controller.updateGroup);
+
+// DELETE /api/expense-groups/:id - Delete Group
+router.delete('/:id', firebaseAuthMiddleware, controller.deleteGroup);
 
 // POST /api/expense-groups/:id/members
 router.post('/:id/members', firebaseAuthMiddleware, controller.addMember);
+
+// DELETE /api/expense-groups/:id/members/:memberId
+router.delete('/:id/members/:memberId', firebaseAuthMiddleware, controller.removeMember);
 
 // POST /api/expense-groups/:id/expenses
 router.post('/:id/expenses', firebaseAuthMiddleware, controller.addExpense);
