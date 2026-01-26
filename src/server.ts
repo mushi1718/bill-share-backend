@@ -12,7 +12,7 @@ dotenv.config({ path: path.resolve(process.cwd(), `.env.${env}`) });
 import authRoutes from './presentation/routes/auth.routes';
 import userRoutes from './presentation/routes/user.routes';
 import expenseGroupRoutes from './presentation/routes/expense-group.routes';
-import { AppDataSource } from './infrastructure/config/data-source';
+import { BillShareDataSource } from './infrastructure/config/bill-share-data-source';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -27,7 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
 // Initialize database connection and start server
-AppDataSource.initialize()
+BillShareDataSource.initialize()
   .then(() => {
     console.log('Database connection established successfully');
     app.listen(port, () => {

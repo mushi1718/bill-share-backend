@@ -16,12 +16,21 @@ export class ExpenseGroupService {
     private balanceService = new BalanceService();
 
     // 建立一個新的分帳群組
-    async createGroup(name: string, currency: string = 'TWD'): Promise<ExpenseGroup> {
+    async createGroup(name: string, currency: string = 'TWD', creator?: { userId: string, name: string, avatarUrl?: string }): Promise<ExpenseGroup> {
         const group = this.groupRepo.create({
             name,
             currency
         });
-        return await this.groupRepo.save(group);
+        const savedGroup = await this.groupRepo.save(group);
+
+        // 如果有建立者資訊，自動將其加入為成員
+        if (creator) {
+            await this.addMember(savedGroup.id, creator.name, creator.userId, creator.avatarUrl);
+            // 重新讀取以包含成員資訊 (可選)
+            // return await this.getGroupDetails(savedGroup.id) as ExpenseGroup;
+        }
+
+        return savedGroup;
     }
 
     // 新增群組成員 (可以是已註冊的使用者，也可以是單純的訪客名稱)
@@ -176,14 +185,38 @@ export class ExpenseGroupService {
     }
 
     // 根據 UserID 查找他參與的所有群組
+    // 根據 UserID 查找他參與的所有群組
     async getGroupsByUserId(userId: string): Promise<ExpenseGroup[]> {
-        // 因為沒有直接關聯 (No FK)，我們必須先找出該 User 參與的所有 Member 實體
+        // 1. 先找出該 User 參與的所有 Member 實體，取得 Group IDs
         const members = await this.memberRepo.find({
             where: { user_id: userId },
-            relations: ["group"]
+            select: ['group_id'] // 只需取得 group_id
         });
-        // 再從 Member 實體中取出 Group
-        return members.map(m => m.group);
+
+        const groupIds = members.map(m => m.group_id);
+
+        if (groupIds.length === 0) {
+            return [];
+        }
+
+        // 2. 透過 GroupRepo 使用 In 查詢取得完整的 Group 資料 (包含 members, expenses 等)
+        // 這是因為前端 graphUtils 需要完整的資料結構來計算
+        const groups = await this.groupRepo.find({
+            where: {
+                id: require('typeorm').In(groupIds)
+            },
+            relations: ["members", "expenses", "expenses.splits", "expenses.payer"],
+            order: { created_at: 'DESC' }
+        });
+
+        // 過濾已刪除的 expenses
+        groups.forEach(g => {
+            if (g.expenses) {
+                g.expenses = g.expenses.filter(e => !e.is_deleted);
+            }
+        });
+
+        return groups;
     }
 
     // ===== Identity Linking: 取得成員摘要 (合併前確認) =====

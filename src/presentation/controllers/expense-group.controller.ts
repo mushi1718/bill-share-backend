@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { ExpenseGroupService } from '../../application/services/expense-group.service';
+import { dbUserRepository } from '../../infrastructure/repositories/db-user.repository';
 
 export class ExpenseGroupController {
     private service: ExpenseGroupService;
@@ -12,7 +13,23 @@ export class ExpenseGroupController {
     createGroup = async (req: Request, res: Response) => {
         try {
             const { name, currency } = req.body;
-            const group = await this.service.createGroup(name, currency);
+            const firebaseUser = (req as any).user;
+
+            let creator: { userId: string; name: string; avatarUrl?: string } | undefined;
+
+            if (firebaseUser?.uid) {
+                // Look up the DB user by Firebase UID to get the actual DB user ID
+                const dbUser = await dbUserRepository.findByFirebaseUid(firebaseUser.uid);
+                if (dbUser) {
+                    creator = {
+                        userId: dbUser.id, // Use DB UUID, not Firebase UID
+                        name: dbUser.name || firebaseUser.name || 'Owner',
+                        avatarUrl: dbUser.avatarUrl || firebaseUser.picture
+                    };
+                }
+            }
+
+            const group = await this.service.createGroup(name, currency, creator);
             res.status(201).json(group);
         } catch (error: any) {
             res.status(500).json({ error: error.message });

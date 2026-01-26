@@ -1,10 +1,10 @@
-import { AppDataSource } from '../config/data-source';
+import { BillShareDataSource } from '../config/bill-share-data-source';
 import { User as UserEntity } from '../database/entities/user.entity';
 import { User } from '../../domain/entities/user';
 import { IUserRepository } from '../../domain/repositories/user.repository';
 
 export class DbUserRepository implements IUserRepository {
-  private repository = AppDataSource.getRepository(UserEntity);
+  private repository = BillShareDataSource.getRepository(UserEntity);
 
   async findById(id: string): Promise<User | null> {
     const entity = await this.repository.findOneBy({ id });
@@ -22,6 +22,12 @@ export class DbUserRepository implements IUserRepository {
     return await this.repository.findOneBy({ email });
   }
 
+  async findByFirebaseUid(firebaseUid: string): Promise<User | null> {
+    const entity = await this.repository.findOneBy({ firebaseUid });
+    if (!entity) return null;
+    return this.mapToDomain(entity);
+  }
+
   async create(userData: Omit<User, 'id'> & { firebaseUid?: string }): Promise<User> {
     const entity = this.repository.create({
       ...userData,
@@ -32,20 +38,20 @@ export class DbUserRepository implements IUserRepository {
   }
 
   async updatePreferences(id: string, preferences: Record<string, any>): Promise<User> {
-      // Fetch existing preferences to merge
-      const user = await this.repository.findOneBy({ id });
-      if (!user) throw new Error('User not found');
+    // Fetch existing preferences to merge
+    const user = await this.repository.findOneBy({ id });
+    if (!user) throw new Error('User not found');
 
-      const updatedPreferences = {
-          ...user.preferences,
-          ...preferences
-      };
+    const updatedPreferences = {
+      ...user.preferences,
+      ...preferences
+    };
 
-      await this.repository.update(id, { preferences: updatedPreferences });
-      
-      const updatedUser = await this.repository.findOneBy({ id });
-      if (!updatedUser) throw new Error('User not found after update'); // Should not happen
-      return this.mapToDomain(updatedUser);
+    await this.repository.update(id, { preferences: updatedPreferences });
+
+    const updatedUser = await this.repository.findOneBy({ id });
+    if (!updatedUser) throw new Error('User not found after update'); // Should not happen
+    return this.mapToDomain(updatedUser);
   }
 
   private mapToDomain(entity: UserEntity): User {
