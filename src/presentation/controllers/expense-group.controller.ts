@@ -92,8 +92,21 @@ export class ExpenseGroupController {
     addExpense = async (req: Request, res: Response) => {
         try {
             const { id } = req.params;
-            const { payerMemberId, amount, description, splits, category } = req.body;
-            const expense = await this.service.addExpense(id, payerMemberId, amount, description, splits, category);
+            const { payerMemberId, amount, description, splits, category, splitMode, splitData } = req.body;
+
+            // If splitMode is used, splits might be calculated by backend, so default to empty array if not provided
+            const splitsArg = splits || [];
+
+            const expense = await this.service.addExpense(
+                id,
+                payerMemberId,
+                amount,
+                description,
+                splitsArg,
+                category,
+                splitMode,
+                splitData
+            );
             res.status(201).json(expense);
         } catch (error: any) {
             res.status(500).json({ error: error.message });

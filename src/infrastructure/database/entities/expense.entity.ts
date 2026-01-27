@@ -28,6 +28,13 @@ export class Expense {
     @Column({ type: 'varchar', length: 20, default: 'GENERAL' })
     category!: string; // 'GENERAL' | 'SETTLEMENT'
 
+    @Column({ type: 'varchar', length: 20, nullable: true })
+    split_mode!: string; // Storing as string to avoid strict enum dependency issues in DB layer, but effectively SplitMode
+
+    @Column({ type: 'json', nullable: true })
+    split_data!: any;
+
+
     @Column()
     description!: string;
 

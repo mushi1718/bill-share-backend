@@ -7,6 +7,7 @@ import { ExpenseLog } from "../../infrastructure/database/entities/expense-log.e
 import { v4 as uuidv4 } from 'uuid';
 import { BalanceService } from "./balance.service";
 import { In } from "typeorm";
+import { SplitStrategyFactory, SplitMode } from "../../domain/strategies/split-strategy";
 
 export class ExpenseGroupService {
     private groupRepo = BillShareDataSource.getRepository(ExpenseGroup);
@@ -149,15 +150,55 @@ export class ExpenseGroupService {
         }
     }
 
+
+
+
+
     // 新增一筆帳務紀錄 (包含總金額、付款人、以及分帳細節)
-    async addExpense(groupId: string, payerMemberId: string, amount: number, description: string, splits: { memberId: string, amount: number }[], category: string = 'GENERAL'): Promise<Expense> {
-        // 1. 驗證群組是否存在
-        const group = await this.groupRepo.findOneBy({ id: groupId });
+    async addExpense(
+        groupId: string,
+        payerMemberId: string,
+        amount: number,
+        description: string,
+        splits: { memberId: string, amount: number }[],
+        category: string = 'GENERAL',
+        splitMode?: string, // Use string to match entity but conceptually SplitMode
+        splitData?: any
+    ): Promise<Expense> {
+        // 1. 驗證群組是否存在 (需要成員列表來計算分帳)
+        const group = await this.groupRepo.findOne({
+            where: { id: groupId },
+            relations: ["members"]
+        });
         if (!group) throw new Error("Group not found");
 
         // 2. 驗證付款人是否存在
         const payer = await this.memberRepo.findOneBy({ id: payerMemberId });
         if (!payer) throw new Error("Payer not found");
+
+        // 2.5 策略模式分帳計算 (若有指定模式)
+        let finalSplits = splits;
+
+        if (splitMode) {
+            try {
+                // 嘗試將 string 轉為 Enum
+                const mode = splitMode as SplitMode;
+                const strategy = SplitStrategyFactory.getStrategy(mode);
+
+                // 準備策略需要的參數
+                // 大多數策略需要 memberId 列表
+                const memberIds = group.members.map(m => m.id);
+
+                // 驗證
+                strategy.validate(amount, memberIds, splitData);
+
+                // 計算
+                finalSplits = strategy.calculateSplits(amount, memberIds, splitData);
+
+            } catch (error: any) {
+                throw new Error(`Split calculation failed: ${error.message}`);
+            }
+        }
 
         // 3. 建立帳務實體
         const expense = this.expenseRepo.create({
@@ -167,10 +208,12 @@ export class ExpenseGroupService {
             amount,
             description,
             category,
+            split_mode: splitMode,
+            split_data: splitData,
             is_deleted: false,
             version: 1,
             // 4. 處理分帳明細 (Splits)
-            splits: splits.map(s => {
+            splits: finalSplits.map(s => {
                 const split = new ExpenseSplit();
                 split.member_id = s.memberId;
                 split.amount = s.amount;
