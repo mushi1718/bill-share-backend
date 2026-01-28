@@ -4,6 +4,7 @@ import { GroupMember } from "../../infrastructure/database/entities/group-member
 import { Expense } from "../../infrastructure/database/entities/expense.entity";
 import { ExpenseSplit } from "../../infrastructure/database/entities/expense-split.entity";
 import { ExpenseLog } from "../../infrastructure/database/entities/expense-log.entity";
+import { ExpenseStrategyInput } from "../../infrastructure/database/entities/expense-strategy-input.entity";
 import { v4 as uuidv4 } from 'uuid';
 import { BalanceService } from "./balance.service";
 import { In } from "typeorm";
@@ -14,6 +15,7 @@ export class ExpenseGroupService {
     private memberRepo = BillShareDataSource.getRepository(GroupMember);
     private expenseRepo = BillShareDataSource.getRepository(Expense);
     private splitRepo = BillShareDataSource.getRepository(ExpenseSplit);
+    private strategyInputRepo = BillShareDataSource.getRepository(ExpenseStrategyInput);
     private logRepo = BillShareDataSource.getRepository(ExpenseLog);
     private balanceService = new BalanceService();
 
@@ -208,8 +210,8 @@ export class ExpenseGroupService {
             amount,
             description,
             category,
-            split_mode: splitMode,
-            split_data: splitData,
+            split_strategy: splitMode, // Renamed in DB
+            // split_data removed
             is_deleted: false,
             version: 1,
             // 4. 處理分帳明細 (Splits)
@@ -223,6 +225,39 @@ export class ExpenseGroupService {
 
         // 儲存帳務 (Cascading 會一併儲存 Splits)
         const savedExpense = await this.expenseRepo.save(expense);
+
+        // 5. 儲存策略資料 (Allocations / Items)
+        if (splitMode && splitData) {
+            if (splitMode === SplitMode.ITEMIZED) {
+                // ITEMIZED (now covers Exact Amount and Items)
+                const itemsData = splitData.items;
+                if (Array.isArray(itemsData)) {
+                    const strategyInputs = itemsData.map((item: any) => {
+                        const input = new ExpenseStrategyInput();
+                        input.expense = savedExpense;
+                        input.member_id = item.memberId;
+                        input.type = 'ITEMIZED'; // or 'AMOUNT'
+                        input.value = item.amount;
+                        input.name = item.name || null;
+                        return input;
+                    });
+                    await this.strategyInputRepo.save(strategyInputs);
+                }
+            } else if (splitMode === SplitMode.PERCENTAGE) {
+                // PERCENTAGE
+                const inputs: ExpenseStrategyInput[] = [];
+                for (const [memberId, value] of Object.entries(splitData)) {
+                    const input = new ExpenseStrategyInput();
+                    input.expense = savedExpense;
+                    input.member_id = memberId;
+                    input.type = 'PERCENTAGE';
+                    input.value = Number(value);
+                    input.name = null;
+                    inputs.push(input);
+                }
+                await this.strategyInputRepo.save(inputs);
+            }
+        }
 
         // 記錄建立日誌
         await this.createLog(savedExpense.id, 'CREATE', payerMemberId, null, this.expenseToJson(savedExpense));

@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { ExpenseGroup } from "./expense-group.entity";
 import { GroupMember } from "./group-member.entity";
 import { ExpenseSplit } from "./expense-split.entity";
+import { ExpenseStrategyInput } from "./expense-strategy-input.entity";
 
 @Entity()
 export class Expense {
@@ -28,12 +29,11 @@ export class Expense {
     @Column({ type: 'varchar', length: 20, default: 'GENERAL' })
     category!: string; // 'GENERAL' | 'SETTLEMENT'
 
+    // Renamed from split_mode to be more descriptive of the distinct strategy used
     @Column({ type: 'varchar', length: 20, nullable: true })
-    split_mode!: string; // Storing as string to avoid strict enum dependency issues in DB layer, but effectively SplitMode
+    split_strategy!: string;
 
-    @Column({ type: 'json', nullable: true })
-    split_data!: any;
-
+    // Removed split_data (JSON) in favor of relational tables
 
     @Column()
     description!: string;
@@ -54,4 +54,7 @@ export class Expense {
 
     @OneToMany(() => ExpenseSplit, (split: ExpenseSplit) => split.expense, { cascade: true })
     splits!: ExpenseSplit[];
+
+    @OneToMany(() => ExpenseStrategyInput, (input: ExpenseStrategyInput) => input.expense, { cascade: true })
+    strategy_inputs!: ExpenseStrategyInput[];
 }
